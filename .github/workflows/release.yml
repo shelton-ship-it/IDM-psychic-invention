@@ -1,0 +1,95 @@
+name: Release
+
+# Compila e empacota o StreamVault.
+#  - Etiqueta "vX.Y.Z" (ex.: git tag v1.0.0 && git push --tags): corre os testes, empacota e
+#    cria uma release EM RASCUNHO no GitHub com todos os ficheiros (reveja e publique à mão).
+#  - Manualmente (Actions > Release > Run workflow): empacota e deixa os ficheiros como
+#    artefacto da execução (sem criar release).
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão a empacotar (ex.: 1.0.0 ou 1.0.0-rc1)'
+        required: true
+        default: '0.0.0-dev'
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  package:
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # o commit e a data do commit entram no binário e nos arquivos
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - name: versão
+        id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then V="${GITHUB_REF_NAME#v}"; else V="$INPUT_VERSION"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "A empacotar a versão $V"
+      - name: compilar e empacotar
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: bash scripts/package.sh "$VERSION" dist
+      - name: guardar artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamvault-${{ steps.v.outputs.version }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # criar a release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: streamvault-${{ needs.package.outputs.version }}
+          path: dist
+      - name: criar a release (rascunho)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          cat > notes.md <<'NOTES'
+          ## Antes de publicar
+          - Os ficheiros **não estão assinados digitalmente** (o Windows pode avisar que o editor é desconhecido).
+          - Confirme a integridade com `SHA256SUMS`.
+          - Esta versão não tem atualização automática.
+          - Reveja `docs/PENDENTE.md`: o que foi validado com servidores reais e o que ainda não foi.
+
+          ## Ficheiros
+          - `streamvault-<versão>-windows-amd64.zip`: o programa para Windows (`streamvault.exe -open`).
+          - `streamvault-<versão>-linux-*.tar.gz` e `-darwin-*.tar.gz`: outros sistemas (o projeto só testa oficialmente o Windows).
+          - `streamvault-extension-<versão>.zip`: a extensão do navegador (instalação em modo de programador).
+          NOTES
+          FLAGS=(--draft)
+          case "$VERSION" in *-*) FLAGS+=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "StreamVault $VERSION" --notes-file notes.md "${FLAGS[@]}"
