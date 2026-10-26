@@ -1,0 +1,95 @@
+{
+  "product": "StreamVault",
+  "edition": "Pro",
+  "price_brl_cents": 800,
+  "checkout_url": "",
+  "download_windows_url": "",
+  "download_android_url": "",
+  "contact_email": "",
+  "features": [
+    {
+      "id": "accelerate",
+      "enabled": true,
+      "title": "Divide o download em várias ligações",
+      "text": "Cada download usa várias ligações em paralelo (8 por defeito, até 32) e retoma segmento a segmento. Se o servidor limitar as ligações, o StreamVault ajusta-se sozinho. O ganho depende do servidor."
+    },
+    {
+      "id": "resume",
+      "enabled": true,
+      "title": "Retoma sem corromper",
+      "text": "Pause e retome a qualquer momento. Se o ficheiro mudou no servidor, o StreamVault deteta e recomeça em vez de juntar partes diferentes."
+    },
+    {
+      "id": "integrity",
+      "enabled": true,
+      "title": "Só diz “concluído” com prova",
+      "text": "Cada transferência passa por uma verificação antes de ficar concluída. Se falhar, vê o motivo e o que fazer a seguir."
+    },
+    {
+      "id": "safety",
+      "enabled": true,
+      "title": "Nada é executado por si",
+      "text": "Instaladores e executáveis são descarregados, mas nunca abertos automaticamente. E um site público não consegue redirecioná-lo para a sua rede interna."
+    },
+    {
+      "id": "organize",
+      "enabled": true,
+      "title": "Biblioteca organizada",
+      "text": "Vídeos, música, documentos e arquivos vão para a sua pasta. Cópias idênticas são avisadas, nunca apagadas sozinhas."
+    },
+    {
+      "id": "capture",
+      "enabled": true,
+      "title": "Encontra o vídeo na página",
+      "text": "Cole o endereço de uma página e o StreamVault lista o vídeo e o áudio que ela expõe. Descarrega com o mesmo referer do navegador, para servidores que recusam pedidos \"nus\"."
+    },
+    {
+      "id": "lan",
+      "enabled": true,
+      "title": "Do telemóvel para o computador",
+      "text": "Envie um link ou um ficheiro para outro dispositivo na mesma rede. Emparelha com um código de 6 dígitos e o tráfego vai cifrado."
+    },
+    {
+      "id": "hls",
+      "enabled": false,
+      "title": "Vídeos em stream (HLS)",
+      "text": "Descarrega vídeos em demanda servidos em HLS (.m3u8) ou DASH (.mpd) sem cifra e junta os segmentos (e o áudio, quando vem em separado, em MP4) num só ficheiro. Streams cifrados ou ao vivo não são suportados e o StreamVault explica porquê."
+    },
+    {
+      "id": "login-downloads",
+      "enabled": false,
+      "title": "Downloads atrás de login",
+      "text": "Opcionalmente, a extensão envia os cookies do site do link ao StreamVault, só em memória e só para esse site. Se o StreamVault reiniciar, a transferência pede para voltar a adicionar a partir do navegador."
+    },
+    {
+      "id": "scheduler",
+      "enabled": false,
+      "title": "Agendar downloads",
+      "text": "Escolha a hora a que um download deve começar. Se o computador estiver desligado, começa quando o StreamVault arrancar."
+    },
+    {
+      "id": "page-files",
+      "enabled": false,
+      "title": "Todos os ficheiros de uma página",
+      "text": "Liste os PDF, ZIP e outros ficheiros de uma página (e das páginas seguintes do mesmo site), escolha e descarregue de uma vez. Só lê o HTML da página: listas montadas por JavaScript não aparecem."
+    },
+    {
+      "id": "torrent",
+      "enabled": false,
+      "title": "Magnet e .torrent",
+      "text": "Cada peça é conferida contra o torrent antes de o ficheiro ser dado como concluído."
+    }
+  ],
+  "license_includes": [
+    "Sem anúncios",
+    "Fila prioritária",
+    "Filtros avançados",
+    "Motor torrent",
+    "Transferência entre dispositivos"
+  ],
+  "privacy": [
+    "As suas transferências, o histórico e as definições ficam no seu dispositivo.",
+    "O StreamVault não envia a lista do que descarrega a nenhum servidor nosso.",
+    "A licença é um ficheiro assinado que a aplicação valida localmente."
+  ]
+}

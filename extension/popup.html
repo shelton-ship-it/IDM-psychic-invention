@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"><title>StreamVault</title>
+<style>
+:root{--bg:#fff;--ink:#14202b;--muted:#5b6b79;--line:#d5dce3;--accent:#0b6e8a;--fail:#a3262a}
+@media (prefers-color-scheme:dark){:root{--bg:#18222b;--ink:#e6edf3;--muted:#93a3b1;--line:#2a3744;--accent:#4fb3d1;--fail:#ef7b7e}}
+body{margin:0;width:380px;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+h1{font-size:15px;margin:0}
+button{font:inherit;cursor:pointer}
+.link{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:4px;padding:6px 12px;font-weight:600}
+ul{list-style:none;margin:0;padding:0;max-height:340px;overflow:auto}
+li{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.n{overflow-wrap:anywhere}.m{color:var(--muted);font-size:12px}
+#st{padding:10px 14px;color:var(--muted);min-height:20px}#st.bad{color:var(--fail)}
+.k{font-size:11px;text-transform:uppercase;color:var(--muted);margin-right:6px}
+#sch,#bar{padding:6px 14px;border-bottom:1px solid var(--line)}
+input[type=datetime-local]{font:inherit;max-width:210px}
+.cat{font-size:11px;color:var(--muted);margin-left:6px}
+footer{padding:10px 14px;display:flex;justify-content:space-between}
+</style></head>
+<body>
+<header><h1>StreamVault</h1><span><button class="link" id="find">Procurar vídeo</button> · <button class="link" id="grab">Todos os ficheiros</button></span></header>
+<div id="st"></div>
+<div id="sch" class="m"><label>Agendar para (opcional) <input type="datetime-local" id="at"></label></div>
+<div id="bar" class="m" hidden><button class="btn" id="dlsel">Descarregar selecionados</button> <span id="cnt"></span></div>
+<ul id="list"></ul>
+<footer><button class="link" id="opts">Definições</button><span class="m" id="dm"></span></footer>
+<script src="lib/classify.js"></script>
+<script src="lib/daemon.js"></script>
+<script src="popup.js"></script>
+</body></html>

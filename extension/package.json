@@ -1,0 +1,7 @@
+{
+  "name": "streamvault-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Extensão de captura de vídeo do StreamVault (Manifest V3)",
+  "scripts": { "test": "node --test test/*.test.js" }
+}

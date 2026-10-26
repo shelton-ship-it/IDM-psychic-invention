@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "StreamVault — captura de vídeo",
+  "version": "0.1.0",
+  "description": "Deteta vídeo e áudio nas páginas e envia-os ao StreamVault, que corre no seu computador.",
+  "minimum_chrome_version": "110",
+  "permissions": ["webRequest", "storage", "tabs"],
+  "optional_permissions": ["cookies"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "StreamVault", "default_popup": "popup.html",
+    "default_icon": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" } },
+  "options_page": "options.html",
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+}

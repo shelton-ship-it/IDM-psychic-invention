@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamVault — descarregue e confirme que chegou inteiro</title>
+<meta name="description" content="Gestor de transferências que só dá um ficheiro como concluído depois de o verificar. Retoma segura, sem execução automática, organização e envio entre dispositivos.">
+<style>
+:root{
+  --bg:#e8eee9; --ink:#0f2a22; --muted:#46594f; --line:#b9c7be; --panel:#f4f7f4;
+  --ok:#2840d8; --ok-ink:#fff; --wait:#d99a1b;
+  --serif:"Palatino Linotype",Palatino,"Book Antiqua","URW Palladio L",Georgia,serif;
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1c18; --ink:#e4efe8; --muted:#9db3a6; --line:#2a3d35; --panel:#15251f; --ok:#8fa2ff; --ok-ink:#0b1020; --wait:#e6b23c}
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--sans)}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--ok);outline-offset:3px}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+header{padding:22px 0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px}
+.brand{font-family:var(--serif);font-size:21px;font-weight:700;letter-spacing:.2px;text-decoration:none}
+nav a{margin-right:20px;font-size:15px;color:var(--muted);text-underline-offset:4px}
+nav a:hover{color:var(--ink)}
+nav a:last-child{margin-right:0}
+
+/* herói: a verificação por peças é o produto */
+.hero{padding:44px 0 56px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:48px;align-items:center}
+h1{font-family:var(--serif);font-size:clamp(34px,5.4vw,58px);line-height:1.08;margin:0 0 20px;font-weight:700;letter-spacing:-.4px}
+.lead{font-size:19px;color:var(--muted);max-width:34em;margin:0 0 28px}
+.cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-block;padding:13px 22px;border-radius:4px;background:var(--ok);color:var(--ok-ink);font-weight:600;text-decoration:none;border:2px solid var(--ok)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--ink)}
+.btn[aria-disabled=true]{opacity:.55;pointer-events:none}
+.note{font-size:14px;color:var(--muted);margin-top:12px}
+
+.proof{border:1px solid var(--line);background:var(--panel);padding:18px;border-radius:2px}
+.proof .file{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:var(--muted);margin-bottom:12px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
+.grid i{aspect-ratio:1;background:var(--wait);opacity:.35;border-radius:1px;transition:background .25s,opacity .25s}
+.grid i.ok{background:var(--ok);opacity:1}
+.proof .status{margin-top:14px;font-weight:600;font-variant-numeric:tabular-nums;min-height:1.6em}
+.proof .status.done{color:var(--ok)}
+@media (prefers-reduced-motion:reduce){.grid i{transition:none}}
+
+section{padding:48px 0;border-top:1px solid var(--line)}
+h2{font-family:var(--serif);font-size:28px;margin:0 0 22px;line-height:1.2}
+dl{margin:0;display:grid;grid-template-columns:minmax(0,15em) minmax(0,1fr);gap:20px 40px}
+dt{font-weight:700}
+dd{margin:0;color:var(--muted);max-width:38em}
+.price{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start}
+.amount{font-family:var(--serif);font-size:56px;line-height:1;font-weight:700}
+.amount small{font-size:17px;font-family:var(--sans);font-weight:400;color:var(--muted);margin-left:8px}
+ul.plain{margin:0;padding-left:1.1em;color:var(--muted)}
+ul.plain li{margin:6px 0}
+footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (max-width:760px){
+  .hero,.price{grid-template-columns:1fr;gap:30px}
+  dl{grid-template-columns:1fr;gap:4px 0}
+  dd{margin-bottom:18px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="#top" id="top">StreamVault</a>
+    <nav aria-label="Principal"><a href="#recursos">Recursos</a><a href="#preco">Preço</a><a href="#privacidade">Privacidade</a></nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <h1>Só é concluído depois de conferido.</h1>
+        <p class="lead">O StreamVault descarrega, retoma e organiza os seus ficheiros — e só os marca como concluídos quando a verificação confirma que chegaram inteiros.</p>
+        <div class="cta">
+          <a class="btn" id="dl-win" href="#preco" aria-disabled="true">Windows</a>
+          <a class="btn ghost" id="dl-and" href="#preco" aria-disabled="true">Android</a>
+        </div>
+        <p class="note" id="dl-note">As transferências ficam no seu dispositivo.</p>
+      </div>
+      <div class="proof" role="img" aria-label="Demonstração: 48 peças de um ficheiro a serem verificadas uma a uma">
+        <div class="file"><span>filme-4k.mkv</span><span id="gcount">0 / 48 peças</span></div>
+        <div class="grid" id="grid" aria-hidden="true"></div>
+        <div class="status" id="gstatus">A verificar…</div>
+      </div>
+    </div>
+
+    <section id="recursos">
+      <h2>O que faz</h2>
+      <dl id="features"></dl>
+    </section>
+
+    <section id="preco">
+      <h2>Preço</h2>
+      <div class="price">
+        <div>
+          <div class="amount" id="amount">—<small id="edition"></small></div>
+          <p class="note" id="buy-note"></p>
+          <p><a class="btn" id="buy" href="#preco" aria-disabled="true">Comprar licença</a></p>
+        </div>
+        <div>
+          <p style="margin-top:0"><strong>A licença inclui</strong></p>
+          <ul class="plain" id="includes"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacidade">
+      <h2>Privacidade</h2>
+      <ul class="plain" id="privacy"></ul>
+    </section>
+  </main>
+
+  <footer id="foot">StreamVault</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function el(tag,text){var e=document.createElement(tag);e.textContent=text;return e}
+
+  // demonstração: 48 peças verificadas em sequência, uma única vez
+  var N=48, grid=$('grid'), cells=[];
+  for(var i=0;i<N;i++){var c=document.createElement('i');grid.appendChild(c);cells.push(c)}
+  function done(){ $('gcount').textContent=N+' / '+N+' peças'; $('gstatus').textContent='Verificado · pode abrir o ficheiro'; $('gstatus').className='status done'; }
+  if(window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+    cells.forEach(function(c){c.className='ok'}); done();
+  } else {
+    var k=0,t=setInterval(function(){
+      cells[k].className='ok'; k++; $('gcount').textContent=k+' / '+N+' peças';
+      if(k===N){clearInterval(t);done()}
+    },55);
+  }
+
+  function money(cents){
+    return (cents/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  }
+  function link(id,url,label){
+    var a=$(id); if(url){a.href=url;a.removeAttribute('aria-disabled')} else {a.title=label}
+  }
+
+  fetch('site-config.json').then(function(r){return r.json()}).then(function(cfg){
+    var f=$('features');
+    cfg.features.filter(function(x){return x.enabled}).forEach(function(x){
+      f.appendChild(el('dt',x.title)); f.appendChild(el('dd',x.text));
+    });
+    $('amount').firstChild.nodeValue=money(cfg.price_brl_cents);
+    $('edition').textContent='Licença '+cfg.edition;
+    var inc=$('includes'); (cfg.license_includes||[]).forEach(function(t){inc.appendChild(el('li',t))});
+    var pv=$('privacy'); (cfg.privacy||[]).forEach(function(t){pv.appendChild(el('li',t))});
+    link('buy',cfg.checkout_url,'A compra abre em breve');
+    link('dl-win',cfg.download_windows_url,'Disponível em breve');
+    link('dl-and',cfg.download_android_url,'Disponível em breve');
+    if(!cfg.checkout_url) $('buy-note').textContent='A compra ainda não está aberta.';
+    if(!cfg.download_windows_url&&!cfg.download_android_url) $('dl-note').textContent='Os downloads ainda não estão disponíveis.';
+    $('foot').textContent=cfg.product+(cfg.contact_email?' · '+cfg.contact_email:'');
+  }).catch(function(){
+    $('features').appendChild(el('dd','Não foi possível carregar o conteúdo desta página. Atualize a página.'));
+  });
+})();
+</script>
+</body>
+</html>

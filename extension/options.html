@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"><title>StreamVault — definições</title>
+<style>
+body{font:15px/1.55 "Segoe UI",system-ui,sans-serif;max-width:620px;margin:32px auto;padding:0 20px;color:#14202b}
+@media (prefers-color-scheme:dark){body{background:#18222b;color:#e6edf3}}
+input[type=text]{width:100%;padding:9px 10px;font:inherit;box-sizing:border-box;margin:6px 0 10px}
+button{font:inherit;padding:8px 16px;background:#0b6e8a;color:#fff;border:0;border-radius:4px;font-weight:600;cursor:pointer}
+#st{margin-top:12px;min-height:22px}#st.bad{color:#a3262a}
+code{background:rgba(127,127,127,.18);padding:1px 5px;border-radius:3px}
+</style></head>
+<body>
+<h1>Ligar ao StreamVault</h1>
+<p>Inicie o StreamVault no computador. Ele mostra uma linha <code>Abra: http://127.0.0.1:47800/#token=…</code>. Cole essa linha completa aqui.</p>
+<label for="conn">Endereço do StreamVault</label>
+<input id="conn" type="text" autocomplete="off" placeholder="http://127.0.0.1:47800/#token=…">
+<button id="save">Guardar e testar</button>
+<div id="st" role="status"></div>
+<h2>Downloads atrás de login</h2>
+<label><input type="checkbox" id="ck"> Enviar os cookies do site ao StreamVault</label>
+<p>Desligado por defeito. Ao ligar, o navegador pede a permissão “cookies”. Só são enviados os cookies do endereço que está a descarregar (nunca de outros sites), ficam apenas na memória do StreamVault e perdem-se quando ele fecha. Se uma transferência precisar deles depois disso, falha com explicação e volta a adicioná-la com a sessão iniciada.</p>
+<div id="ckst" role="status"></div>
+<script src="lib/classify.js"></script>
+<script src="lib/daemon.js"></script>
+<script src="options.js"></script>
+</body></html>
