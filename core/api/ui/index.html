@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamVault</title>
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#14202b; --muted:#5b6b79; --line:#d5dce3;
+  --accent:#0b6e8a; --accent-ink:#ffffff; --run:#0b6e8a; --pause:#8a6d0b; --fail:#a3262a; --done:#2a7a4b;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#10171d; --panel:#18222b; --ink:#e6edf3; --muted:#93a3b1; --line:#2a3744;
+        --accent:#4fb3d1; --accent-ink:#06222b; --run:#4fb3d1; --pause:#d6b04a; --fail:#ef7b7e; --done:#5cc08a;}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 20px 64px}
+h1{font-size:22px;font-weight:600;margin:0 0 18px;letter-spacing:.2px}
+h2{font-size:15px;font-weight:600;margin:32px 0 8px}
+form{display:flex;gap:8px;margin-bottom:6px}
+input[type=text]{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font:inherit}
+button{font:inherit;cursor:pointer}
+.primary{padding:10px 16px;border:0;border-radius:6px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+.link{background:none;border:0;color:var(--accent);padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#msg{min-height:22px;color:var(--muted);font-size:14px;margin:4px 0 10px}
+#msg.bad{color:var(--fail)}
+ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+li.task{padding:14px 0;border-bottom:1px solid var(--line)}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.name{font-weight:600;overflow-wrap:anywhere}
+.src{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.state{font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bar{height:4px;background:var(--line);border-radius:2px;margin:8px 0 6px;overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:var(--run)}
+.running .state{color:var(--run)} .paused .state{color:var(--pause)} .failed .state{color:var(--fail)}
+.completed .state{color:var(--done)} .completed .bar>i{background:var(--done);width:100%!important}
+.paused .bar>i{background:var(--pause)} .failed .bar>i{background:var(--fail)}
+.acts{display:flex;gap:16px;flex-wrap:wrap;font-size:14px}
+.err{color:var(--fail);font-size:13.5px;margin:2px 0 6px}
+.note{color:var(--muted);font-size:13.5px;margin:2px 0 6px}
+.empty{padding:28px 0;color:var(--muted)}
+#caplist{margin-bottom:18px}
+.cand{padding:10px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.cand .u{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.kind{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-right:8px}
+.plug{padding:10px 0;border-bottom:1px solid var(--line)}
+.plug small{display:block;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.bar>i{transition:width .3s}}
+</style>
+</head>
+<body>
+<main>
+  <h1>StreamVault</h1>
+  <form id="add">
+    <input id="url" type="text" placeholder="Cole um link http(s), magnet ou .torrent" autocomplete="off" aria-label="Link para descarregar" required>
+    <button class="primary" type="submit">Adicionar</button>
+  </form>
+  <form id="cap">
+    <input id="capurl" type="text" placeholder="Ou cole o endereço de uma página para procurar vídeo e áudio" autocomplete="off" aria-label="Página onde procurar vídeo e áudio">
+    <button class="primary" type="submit">Procurar</button>
+  </form>
+  <div id="msg" role="status"></div>
+  <ul id="caplist"></ul>
+  <ul id="list"></ul>
+  <h2>Adaptadores</h2>
+  <div id="plugins"></div>
+</main>
+<script>
+(function(){
+  var token=new URLSearchParams(location.hash.slice(1)).get('token')||'';
+  history.replaceState(null,'',location.pathname);
+  var $=function(id){return document.getElementById(id)};
+  var tasks={}, live={}, notes={};
+  var LABEL={pending:'Na fila',running:'A descarregar',paused:'Em pausa',verifying:'A verificar',completed:'Concluído',failed:'Falhou',cancelled:'Cancelado'};
+
+  function api(method,path,body){
+    return fetch(path,{method:method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:body?JSON.stringify(body):undefined}).then(function(r){
+        if(r.status===204) return null;
+        return r.json().then(function(j){ if(!r.ok) throw j.error||{message:'Erro '+r.status}; return j; });
+      });
+  }
+  function say(t,bad){var m=$('msg');m.textContent=t||'';m.className=bad?'bad':'';}
+  function bytes(n){
+    if(n==null||n<0) return '—';
+    var u=['B','KB','MB','GB','TB'],i=0;
+    while(n>=1024&&i<u.length-1){n/=1024;i++}
+    return n.toLocaleString('pt-PT',{maximumFractionDigits:i?1:0})+' '+u[i];
+  }
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+  function act(label,fn){var b=el('button','link',label);b.type='button';b.onclick=fn;return b}
+
+  function run(p,okMsg){
+    return p.then(function(){ if(okMsg) say(okMsg); return load(); })
+            .catch(function(e){ say((e.message||'Erro')+(e.action?' '+e.action:''),true); });
+  }
+  function organize(id,keep){
+    api('POST','/v1/tasks/'+id+'/organize',{keep_duplicates:keep}).then(function(r){
+      if(r.action==='duplicate'){
+        notes[id]={dup:r.duplicate_of};
+      } else { notes[id]={text:'Movido para '+r.category}; }
+      render();
+    }).catch(function(e){ say((e.message||'Erro'),true); });
+  }
+
+  function row(t){
+    var l=live[t.id]||{};
+    var done=l.bytes_done!=null?l.bytes_done:t.bytes_done;
+    var total=l.bytes_total>0?l.bytes_total:t.bytes_total;
+    var li=el('li','task '+t.state);
+    var top=el('div','top');
+    var left=el('div');
+    left.appendChild(el('div','name',t.name||t.source));
+    left.appendChild(el('div','src',t.source));
+    var st=LABEL[t.state]||t.state;
+    if(t.state==='running'||t.state==='paused'){ st+=' · '+bytes(done)+(total>0?' / '+bytes(total):''); }
+    else if(t.state==='completed'&&total>0){ st+=' · '+bytes(total); }
+    top.appendChild(left); top.appendChild(el('div','state',st));
+    li.appendChild(top);
+    var bar=el('div','bar'), fill=el('i');
+    fill.style.width=(total>0?Math.min(100,done*100/total):0)+'%';
+    bar.appendChild(fill); li.appendChild(bar);
+    if(t.error){ li.appendChild(el('div','err',t.error.message+(t.error.action?' '+t.error.action:''))); }
+    var n=notes[t.id];
+    if(n&&n.text) li.appendChild(el('div','note',n.text));
+    var acts=el('div','acts');
+    if(n&&n.dup){
+      li.appendChild(el('div','note','Já existe uma cópia idêntica: '+n.dup.join(', ')));
+      acts.appendChild(act('Manter ambas',function(){organize(t.id,true)}));
+      acts.appendChild(act('Ignorar',function(){delete notes[t.id];render()}));
+    } else {
+      if(t.state==='running') acts.appendChild(act('Pausar',function(){run(api('POST','/v1/tasks/'+t.id+'/pause'))}));
+      if(t.state==='paused') acts.appendChild(act('Retomar',function(){run(api('POST','/v1/tasks/'+t.id+'/resume'))}));
+      if(t.state==='failed') acts.appendChild(act('Tentar de novo',function(){run(api('POST','/v1/tasks/'+t.id+'/retry'))}));
+      if(t.state==='completed') acts.appendChild(act('Organizar',function(){organize(t.id,false)}));
+      if(['pending','running','paused','failed'].indexOf(t.state)>=0) acts.appendChild(act('Cancelar',function(){run(api('POST','/v1/tasks/'+t.id+'/cancel'))}));
+      if(['completed','failed','cancelled'].indexOf(t.state)>=0) acts.appendChild(act('Remover da lista',function(){run(api('DELETE','/v1/tasks/'+t.id))}));
+    }
+    li.appendChild(acts);
+    return li;
+  }
+  function render(){
+    var ul=$('list'); ul.textContent='';
+    var ids=Object.keys(tasks);
+    if(!ids.length){ var e=el('li','empty','Nenhuma transferência. Cole um link acima para começar.'); ul.appendChild(e); return; }
+    ids.reverse().forEach(function(id){ ul.appendChild(row(tasks[id])); });
+  }
+  function load(){
+    return api('GET','/v1/tasks').then(function(list){
+      tasks={}; list.forEach(function(t){tasks[t.id]=t}); render();
+    }).catch(function(e){ say(e.message||'Sem ligação ao núcleo.',true); });
+  }
+  function loadPlugins(){
+    api('GET','/v1/plugins').then(function(ps){
+      var box=$('plugins'); box.textContent='';
+      if(!ps.length){ box.appendChild(el('div','empty','Nenhum adaptador instalado.')); return; }
+      ps.forEach(function(p){
+        var d=el('div','plug'); d.appendChild(el('strong',null,p.Name+' '+p.Version));
+        d.appendChild(el('small',null,'Limitações: '+(p.Restrictions||[]).join(' ')));
+        var verb=p.Approved?'revoke':'approve';
+        d.appendChild(act(p.Approved?'Revogar aprovação':'Aprovar',function(){
+          api('POST','/v1/plugins/'+encodeURIComponent(p.Name)+'/'+verb).then(loadPlugins).catch(function(e){say(e.message,true)});
+        }));
+        box.appendChild(d);
+      });
+    }).catch(function(){});
+  }
+
+  // eventos em tempo real (fetch streaming, porque EventSource não envia cabeçalhos)
+  function stream(){
+    fetch('/v1/events',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+      var rd=r.body.getReader(), dec=new TextDecoder(), buf='';
+      function pump(){
+        return rd.read().then(function(x){
+          if(x.done) throw new Error('fim');
+          buf+=dec.decode(x.value,{stream:true});
+          var parts=buf.split('\n\n'); buf=parts.pop();
+          var refresh=false;
+          parts.forEach(function(p){
+            if(p.indexOf('data: ')!==0) return;
+            var ev=JSON.parse(p.slice(6));
+            if(ev.kind==='progress'){ live[ev.task_id]={bytes_done:ev.bytes_done,bytes_total:ev.bytes_total}; }
+            else if(ev.kind==='state'||ev.kind==='completed'||ev.kind==='error'||ev.kind==='file'){ refresh=true; }
+          });
+          if(refresh) load(); else render();
+          return pump();
+        });
+      }
+      return pump();
+    }).catch(function(){ setTimeout(stream,2000); });
+  }
+
+  $('add').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var u=$('url').value.trim(); if(!u) return;
+    api('POST','/v1/tasks',{url:u}).then(function(){ $('url').value=''; say('Adicionado.'); return load(); })
+      .catch(function(e){ say((e.message||'Erro')+(e.action?' '+e.action:''),true); });
+  });
+
+  // captura de vídeo/áudio a partir de uma página (como o IDM)
+  function shortUrl(u){ try{ var x=new URL(u); return x.host+x.pathname; }catch(e){ return u; } }
+  function showCandidates(res){
+    var ul=$('caplist'); ul.textContent='';
+    if(!res.candidates.length){ ul.appendChild(el('li','empty','Nenhuma mídia encontrada nesta página.')); return; }
+    res.candidates.forEach(function(c){
+      var li=el('li','cand'); var left=el('div');
+      var title=el('div'); title.appendChild(el('span','kind',c.kind)); title.appendChild(el('span',null,c.title||shortUrl(c.url)));
+      left.appendChild(title); left.appendChild(el('div','u',shortUrl(c.url)));
+      if(!c.supported) left.appendChild(el('div','note',c.reason||'Não suportado.'));
+      li.appendChild(left);
+      if(c.supported){
+        li.appendChild(act('Descarregar',function(){
+          api('POST','/v1/tasks',{url:c.url,referer:res.page_url,user_agent:navigator.userAgent})
+            .then(function(){ say('Adicionado.'); return load(); })
+            .catch(function(e){ say((e.message||'Erro')+(e.action?' '+e.action:''),true); });
+        }));
+      }
+      ul.appendChild(li);
+    });
+  }
+  $('cap').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var u=$('capurl').value.trim(); if(!u) return;
+    say('A procurar…');
+    api('POST','/v1/capture',{url:u,user_agent:navigator.userAgent}).then(function(res){ say(''); showCandidates(res); })
+      .catch(function(e){ say((e.message||'Erro')+(e.action?' '+e.action:''),true); });
+  });
+  if(!token){ say('Abra o StreamVault pelo endereço que o programa mostrou (inclui a chave de acesso).',true); }
+  load(); loadPlugins(); stream();
+})();
+</script>
+</body>
+</html>
