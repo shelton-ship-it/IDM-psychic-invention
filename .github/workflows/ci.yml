@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call: # também é corrido pelo release.yml antes de empacotar
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - name: dependências (hashes oficiais)
+        run: go mod verify
+      - name: dependências (go.mod/go.sum sem sobras nem faltas)
+        if: runner.os == 'Linux'
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || (echo "::error::go.mod/go.sum desatualizados: corra 'go mod tidy' em core/ e faça commit" && exit 1)
+      - name: ffmpeg (validação independente dos MP4 juntados nos testes)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: gofmt
+        if: runner.os == 'Linux'
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: go vet
+        run: go vet ./...
+      - name: testes (com -race no Linux)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then go test -race -count=1 ./...; else go test -count=1 ./...; fi
+      - name: compilar o daemon Windows
+        if: runner.os == 'Linux'
+        run: GOOS=windows GOARCH=amd64 go build -trimpath -o /dev/null ./cmd/streamvault
+      - name: empacotar (ensaio)
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: TARGETS="windows/amd64" bash scripts/package.sh 0.0.0-ci "$RUNNER_TEMP/pkg"
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: sintaxe
+        run: for f in lib/*.js background.js popup.js options.js; do node --check "$f"; done
+      - name: testes
+        run: node --test test/*.test.js
