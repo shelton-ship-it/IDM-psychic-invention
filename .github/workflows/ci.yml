@@ -42,6 +42,19 @@ jobs:
       - name: gofmt
         if: runner.os == 'Linux'
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: diagnóstico (temporário — apagar depois de resolver)
+        shell: bash
+        run: |
+          go version
+          echo "GOMOD=$(go env GOMOD)"
+          echo "GOFLAGS=$(go env GOFLAGS)"
+          echo "commit=$(git rev-parse HEAD)"
+          for d in engine hlsengine httpengine lan integrity license domain; do
+            echo "== core/$d"
+            ls -la "$d" 2>&1 || echo "PASTA AUSENTE"
+            echo "no git: $(git ls-files "$d" | wc -l) ficheiros"
+          done
+          go list -e -f '{{.ImportPath}} go={{len .GoFiles}} err={{if .Error}}{{.Error}}{{end}}' ./... 2>&1 | head -60 || true
       - name: go vet
         run: go vet ./...
       - name: testes (com -race no Linux)
