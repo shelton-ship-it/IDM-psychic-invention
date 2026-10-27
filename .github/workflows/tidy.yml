@@ -1,0 +1,28 @@
+name: go mod tidy (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache: false
+      - run: go mod tidy
+      - run: go list -m modernc.org/sqlite modernc.org/libc
+      - run: |
+          GOOS=windows GOARCH=amd64 go vet ./...
+          GOOS=windows GOARCH=amd64 go build -o /dev/null ./cmd/streamvault
+      - working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add core/go.mod core/go.sum
+          git diff --cached --quiet || (git commit -m "go mod tidy" && git push)
