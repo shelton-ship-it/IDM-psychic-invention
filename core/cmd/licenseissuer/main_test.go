@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -18,8 +19,12 @@ func TestKeygenIssueVerifyRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, err := os.Stat(filepath.Join(dir, "key-t.key"))
-	if err != nil || fi.Mode().Perm() != 0o600 {
-		t.Fatalf("chave privada deve ter permissão 0600: %v %v", err, fi)
+	if err != nil {
+		t.Fatalf("chave privada em falta: %v", err)
+	}
+	// o Windows não tem permissões POSIX (Perm() devolve sempre 0666)
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
+		t.Fatalf("chave privada deve ter permissão 0600: %v", fi.Mode().Perm())
 	}
 	lic := filepath.Join(dir, "lic.json")
 	if err := run([]string{"issue", "-key", filepath.Join(dir, "key-t.key"), "-key-id", "key-t",

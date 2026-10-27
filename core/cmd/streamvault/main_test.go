@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -175,8 +176,12 @@ func TestAccessTokenPersistsAcrossRestartsUntilRotated(t *testing.T) {
 		t.Fatalf("a chave devia persistir: %s != %s", a, b)
 	}
 	fi, err := os.Stat(filepath.Join(data, "api-token"))
-	if err != nil || fi.Mode().Perm() != 0o600 {
-		t.Fatalf("api-token deve existir com permissão 0600: %v %v", err, fi)
+	if err != nil {
+		t.Fatalf("api-token deve existir: %v", err)
+	}
+	// o Windows não tem permissões POSIX (Perm() devolve sempre 0666)
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
+		t.Fatalf("api-token deve ter permissão 0600: %v", fi.Mode().Perm())
 	}
 	if c := tokenOf("-new-token"); c == a {
 		t.Fatal("-new-token devia gerar uma chave nova")

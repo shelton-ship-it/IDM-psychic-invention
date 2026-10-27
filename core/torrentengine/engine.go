@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -270,20 +272,43 @@ func (e *Engine) loadSource(j *job) (Source, *domain.DownloadError) {
 		"Use magnet ou .torrent.", domain.CertaintyObserved, false)
 }
 
+// localTorrentPath devolve o caminho local de uma origem file://.
+// No Windows aceita também file:///C:/dir/x.torrent, file://C:/dir/x.torrent
+// e file://C:\dir\x.torrent (esta última o url.Parse rejeita).
+func localTorrentPath(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err == nil && u.Scheme == "file" {
+		p := u.Path
+		if runtime.GOOS == "windows" {
+			if len(u.Host) == 2 && u.Host[1] == ':' { // file://C:/dir/x
+				p = u.Host + p
+			} else if len(p) >= 3 && p[0] == '/' && p[2] == ':' { // file:///C:/dir/x
+				p = p[1:]
+			}
+		}
+		return filepath.FromSlash(p), true
+	}
+	if err != nil && runtime.GOOS == "windows" && len(raw) >= 9 &&
+		strings.EqualFold(raw[:7], "file://") && raw[8] == ':' {
+		return filepath.Clean(raw[7:]), true // file://C:\dir\x.torrent
+	}
+	return "", false
+}
+
 func (e *Engine) readTorrentFile(ctx context.Context, raw string) ([]byte, *domain.DownloadError) {
 	bad := func(msg string, err error) *domain.DownloadError {
 		return domain.NewError(domain.ErrInvalidInput, err, msg, "Confirme o ficheiro .torrent.", domain.CertaintyObserved, false)
 	}
 	u, err := url.Parse(raw)
-	if err == nil && u.Scheme == "file" {
-		fi, serr := os.Stat(u.Path)
+	if path, ok := localTorrentPath(raw); ok {
+		fi, serr := os.Stat(path)
 		if serr != nil {
 			return nil, bad("ficheiro .torrent inacessível.", serr)
 		}
 		if fi.Size() > torrent.MaxMetaSize {
 			return nil, bad("ficheiro .torrent demasiado grande.", nil)
 		}
-		data, rerr := os.ReadFile(u.Path)
+		data, rerr := os.ReadFile(path)
 		if rerr != nil {
 			return nil, bad("não foi possível ler o .torrent.", rerr)
 		}

@@ -86,6 +86,12 @@ func (r *Receiver) onFile(sc *secureConn, c net.Conn, peer string, p []byte) boo
 			os.Remove(tmp)
 		}
 	}()
+	// Apaga já o parcial: quando o par recebe a falha não pode restar rasto
+	// (o defer acima só corre depois de a mensagem de falha ser enviada).
+	discard := func() {
+		f.Close()
+		os.Remove(tmp)
+	}
 	if sc.write(msgAccept, nil) != nil {
 		return false
 	}
@@ -105,26 +111,31 @@ func (r *Receiver) onFile(sc *secureConn, c net.Conn, peer string, p []byte) boo
 		}
 		got += int64(len(data))
 		if got > o.Size { // mais bytes do que o declarado: abortar
+			discard()
 			_ = sc.write(msgFail, []byte("excedeu o tamanho declarado"))
 			return false
 		}
 		if _, err := f.Write(data); err != nil {
+			discard()
 			_ = sc.write(msgFail, []byte("erro de escrita"))
 			return false
 		}
 		h.Write(data)
 	}
 	if got != o.Size || hex.EncodeToString(h.Sum(nil)) != strings.ToLower(o.SHA256) {
+		discard()
 		_ = sc.write(msgFail, []byte("verificação de integridade falhou"))
 		return true
 	}
 	if err := f.Sync(); err != nil {
+		discard()
 		_ = sc.write(msgFail, []byte("erro de escrita"))
 		return true
 	}
 	f.Close()
 	final := uniquePath(filepath.Join(r.o.Dir, clean))
 	if err := os.Rename(tmp, final); err != nil {
+		discard()
 		_ = sc.write(msgFail, []byte("não foi possível finalizar"))
 		return true
 	}
