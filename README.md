@@ -16,3 +16,4 @@ scripts/   build reprodutível do Windows
 
 Desenvolvimento: `make test` · `make vet` · `make build-windows VERSION=1.0.0` · `make package VERSION=1.0.0` (todos os sistemas + extensão + SHA256SUMS)
 Executar localmente: `cd core && go run ./cmd/streamvault -open`
+   //////
